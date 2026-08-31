@@ -1,7 +1,7 @@
 # This is shallow copy of my game engine
 
-[!WARNING] 
-This repository contains a partial, restricted architectural preview of a proprietary game engine. It does not reflect the full engine source code or complete feature set.
+> [!WARNING] 
+> This repository contains a partial, restricted architectural preview of a proprietary game engine. It does not reflect the full engine source code or complete feature set.
 
 ## Update Schedule
 This repository is synchronized and updated on the **1st of every month**.
