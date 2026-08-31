@@ -1,0 +1,126 @@
+/* Copyright 2020 - 2026, Hansson Software. All rights reserved. */
+
+#include <cstdlib>
+
+#ifdef MR_DEBUG
+#include <crtdbg.h>
+#endif // MR_DEBUG
+
+
+struct Application;
+
+extern "C" __declspec(dllimport) int LaunchApplication(Application* instance, int argc, char** argv);
+
+#ifdef MR_PLATFORM_WINDOWS
+#define	WIN32_LEAN_AND_MEAN
+#define NOGDICAPMASKS
+#define NOVIRTUALKEYCODES
+#define NOWINMESSAGES
+#define NOWINSTYLES
+#define NOSYSMETRICS
+#define NOMENUS
+#define NOICONS
+#define NOKEYSTATES
+#define NOSYSCOMMANDS
+#define NORASTEROPS
+#define NOSHOWWINDOW
+#define NOATOM
+#define NOCLIPBOARD
+#define NOCOLOR
+#define NOCTLMGR
+#define NODRAWTEXT
+#define NOGDI
+#define NOKERNEL
+#define NONLS
+#define NOMEMMGR
+#define NOMETAFILE
+#define NOMINMAX
+#define NOMSG
+#define NOOPENFILE
+#define NOSCROLL
+#define NOSERVICE
+#define NOSOUND
+#define NOTEXTMETRIC
+#define NOWH
+#define NOWINOFFSETS
+#define NOCOMM
+#define NOKANJI
+#define NOHELP
+#define NOPROFILER
+#define NODEFERWINDOWPOS
+#define NOMCX
+#include <Windows.h>
+#include <PathCch.h>
+#include <winuser.h>
+#include <shellapi.h>
+
+#pragma comment (lib, "Pathcch.lib")                                                                     
+#pragma comment (lib, "User32.lib")                                                                          
+                                                                                                                            
+#pragma warning (disable : 28251)                                                                                    
+#endif // MR_PLATFORM_WINDOWS                                                                                          
+
+#ifdef MR_PLATFORM_WINDOWS
+#pragma warning(disable : 6387)
+
+#define LIBRARY_EXTENSION ".dll"
+#define LIBRARY_EXTENSION_WIDE L".dll"
+
+#if MR_DEBUG_LEVEL == 3
+#define LIBRARY_NAME_CONFIG_SUFFIX "-Debug"
+#define LIBRARY_NAME_CONFIG_SUFFIX_WIDE L"-Debug"
+#elif MR_DEBUG_LEVEL == 2
+#define LIBRARY_NAME_CONFIG_SUFFIX "-Development"
+#define LIBRARY_NAME_CONFIG_SUFFIX_WIDE L"-Development"
+#elif MR_DEBUG_LEVEL == 1
+#define LIBRARY_NAME_CONFIG_SUFFIX "-Test"
+#define LIBRARY_NAME_CONFIG_SUFFIX_WIDE L"-Test"
+#elif MR_DEBUG_LEVEL == 0
+#define LIBRARY_NAME_CONFIG_SUFFIX "-Shipping"
+#define LIBRARY_NAME_CONFIG_SUFFIX_WIDE L"-Shipping"
+#else
+#define LIBRARY_NAME_CONFIG_SUFFIX L""
+#endif
+
+#define ASSEMBLE_DLL_1(x) \
+    L##x ASSEMBLE_DLL_2
+
+#define ASSEMBLE_DLL_2 \
+    LIBRARY_NAME_CONFIG_SUFFIX_WIDE LIBRARY_EXTENSION_WIDE
+
+#define IMPLEMENT_APPLICATION_STARTUP(libName, applicationClass)                                                                         \
+    int main(int argc, char* argv[])                                                                                                     \
+    {                                                                                                                                    \
+        wchar_t path[2048] = {};                                                                                                         \
+        DWORD count = GetModuleFileNameW(nullptr, path, 2047);                                                                           \
+        if (FAILED(PathCchRemoveFileSpec(path, count)))                                                                                  \
+        {                                                                                                                                \
+            MessageBoxW(nullptr, L"Unable to canonicalize engine path!", L"Engine Error!", MB_OK);                                       \
+            return -1;                                                                                                                   \
+        }                                                                                                                                \
+                                                                                                                                         \
+        AddDllDirectory(path);                                                                                                           \
+        HMODULE entryPoint = LoadLibraryExW(ASSEMBLE_DLL_1(libName), nullptr, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_USER_DIRS);    \
+        if (entryPoint != nullptr)                                                                                                       \
+        {                                                                                                                                \
+            typedef int (*ProxyFunction)(Application*, int, char**);                                                                     \
+            ProxyFunction externalLinkageFunction = (ProxyFunction)GetProcAddress(entryPoint, "LaunchApplication");                      \
+            if (externalLinkageFunction)                                                                                                 \
+            {                                                                                                                            \
+                applicationClass application;                                                                  \
+                                                                                                                                         \
+                int Result = externalLinkageFunction(&application, argc, argv);                                                          \
+                                                                                                                                         \
+                if (!FreeLibrary(entryPoint))                                                                                            \
+                    return -1;                                                                                                           \
+                                                                                                                                         \
+                return Result;                                                                                                           \
+            }                                                                                                                            \
+        }                                                                                                                                \
+                                                                                                                                         \
+        MessageBoxW(nullptr, L"Unable to reach engine code!", L"Engine Error!", MB_OK);                                                  \
+        return -1;                                                                                                                       \
+    };                                                                                                                                     
+#else
+#define IMPLEMENT_APPLICATION_STARTUP(applicationClass)
+#endif // MR_PLATFORM_WINDOWS

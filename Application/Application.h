@@ -1,0 +1,101 @@
+﻿/* Copyright 2020 - 2026, Hansson Software. All rights reserved. */
+
+#pragma once
+#include <Types/Delegate.h>
+#include "Types/String.h"
+#include "Logging/Log.h"
+#include <HAL/Commandline.h>
+#include <HAL/HAL.h>
+#include <Core.essential.h>
+
+class Window;
+
+LOG_ADDCATEGORY(Application);
+
+struct CORE_API Application
+{
+	friend void HAL::InitHAL();
+
+	enum class State : i8 
+	{ 
+		Dead = -1, 
+		None, 
+		PreStartup, 
+		Startup, 
+		PostStartup, 
+		Running, 
+		Restarting, 
+		Shutdown 
+	};
+
+	static Application* Get();
+
+	Application();
+
+	Application(const Application&) = delete;
+
+	Application(Application&&) = delete;
+
+	virtual ~Application() noexcept = default;
+
+	virtual void Init();
+
+	virtual void Run(float dt);
+
+	virtual void Shutdown();
+
+	void RequestExit(u32 code);
+
+	Application::State GetCurrentState() const { return currentState; };
+
+	void SetCurrentState(const State newState) { currentState = newState; };
+
+	const String* GetApplicationName() const { return &appName; };
+
+	const String* GetApplicationCodeName() const { return &appCodeName; };
+
+	const String* GetApplicationNameNoSpaces() const { return &appNameNoSpaces; };
+
+	const bool GetIsWindowHiddenFromStart() const { return bHideWindow; };
+
+	const void* GetApplicationNativeHandle() const { return applicationHandle; };
+
+	Window* GetMainWindow() const { return mainWindow; };
+
+	Commandline* GetCommandline() { return &cli; };
+
+protected:
+	State currentState = { State::None };
+
+	bool bHideWindow = false;
+
+	//* Application name, this would be appearing on the created window
+	String appName;
+	String appNameNoSpaces;
+
+	//* Useful for directories
+	String appCodeName;
+
+	struct
+	{
+		String windowName;
+
+		u32 x;
+		u32 y;
+	} windowDefs;
+
+	Commandline cli;
+
+	void* applicationHandle;
+
+private:
+	Window* mainWindow = nullptr;
+};
+
+template<typename T = Application>
+static T* GetApplication()
+{
+	return (T*)Application::Get();
+}
+
+//#define IMPLEMENT_APPLICATION(ApplicationClass)

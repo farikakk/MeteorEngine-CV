@@ -1,0 +1,55 @@
+/* Copyright 2020 - 2026, Hansson Software. All rights reserved. */
+
+#pragma once
+#include <Types/String.h>
+#include <Core.essential.h>
+
+class CORE_API IModule
+{
+	friend class ModuleManager;
+protected:
+
+	enum class ModuleState
+	{
+		None,
+		Loading,
+		Running,
+		Enabled,
+		Disabled,
+		Unloaded
+	};
+
+public:
+	IModule() = default;
+	virtual ~IModule() noexcept = default;
+
+	IModule(const IModule&) = delete;
+	IModule(IModule&&) = delete;
+	
+	IModule& operator=(const IModule&) = delete;
+	IModule& operator=(IModule&&) = delete;
+
+	virtual bool StartupModule() = 0;
+
+	virtual void ShutdownModule() = 0;
+
+	virtual void Update() = 0;
+
+	String GetName() const { return name; }
+
+	ModuleState GetModuleState() const { return moduleState; };
+
+protected:
+	ModuleState moduleState = ModuleState::None;
+
+	String name;
+
+	void* interface;
+};
+
+#define IMPLEMENT_MODULE(ModuleClass)																		 \
+	extern "C" __declspec(dllexport) IModule* InitialiseModule(MemoryHandler* handler)						 \
+	{																										 \
+		ModuleClass* emptyModuleInstance = handler->Allocate<ModuleClass>(sizeof(ModuleClass));	 \
+		return emptyModuleInstance;																			 \
+	}
